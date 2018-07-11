@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RentalZ Property Finder</title>
+	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+	<link rel="stylesheet" type="text/css" href="css/styles.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+	<link href="https://fonts.googleapis.com/css?family=Anton|Paytone+One" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css?family=Rajdhani" rel="stylesheet">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
+	<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+	<script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.11.1/jquery.validate.min.js"></script> 
+	<script defer src="https://use.fontawesome.com/releases/v5.0.0/js/all.js"></script> 
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCA20_4EESP91_VCovXIqtbMWrRjWnuD8g"></script>
+	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+	
+	<script type="text/javascript" charset="utf-8" src="cordova.js"></script>
+	<script type="text/javascript" charset="utf-8" src="js/propertyDetails.js"></script>
+	<script type="text/javascript" charset="utf-8" src="js/dbHandler.js"></script>
+	<script type="text/javascript" charset="utf-8" src="js/create.js"></script>
+	<script type="text/javascript" charset="utf-8" src="js/index.js"></script>
+	<script>
+			$(function(){
+		
+				function camSuccess(imgData) {
+					var path = imgData;
+					$("#img_camera").attr("src", imgData );
+					dbHandler.dataBase.transaction(function (tx){
+            		tx.executeSql('UPDATE Propertyimages SET imgPath =?  Where postRef =?', [path,ref], function (tx, results) {
+               				 alert("Image Updated Successfully");
+            			});
+        			});
+					loadData();	
+				}
+		
+				function camError(error) {
+					alert(error);
+				}
+		
+				function accessCamera(imgData) {
+					var options = {
+						destinationType: Camera.DestinationType.FILE_URI,
+						sourceType: Camera.PictureSourceType.CAMERA
+					};
+		
+					navigator.camera.getPicture(camSuccess, camError, options);
+				}
+		
+				$("#btn_camera").on("click", accessCamera );
+			});
+	</script>
+
+	<script>
+		app.initialize();
+
+		function fullDetails(ref){
+			window.location.href = "#map-page?ref="+ ref;
+		}
+		
+		function flatType(value){
+		if (value == 0) {
+				return "Studio"
+			} else if(value == 1) {
+				return "1 bedrooom"
+			}
+			else if(value == 2) {
+				return "2 bedrooom"
+			}
+			else if(value == 3) {
+				return "3 bedrooom"
+			}
+			else if(value == 4) {
+				return "4 bedrooom"
+			}
+		} 
+	</script>
+		
+  </head>
+  <body>
+		<!-- Start of Home page -->
+		<div data-role="page" id="list" data-cache="false" >
+
+				<div data-role="header" style="overflow:hidden"  data-position="fixed">
+					<h1 class="h" style="font-size:4.1rem;">RentalZ </h1><small class="level-item has-text-centered mytitle ">Search properties for sale and to rent in the UK</small>
+					<div data-role="navbar">
+						<ul>
+							<li><a href="#list" data-icon="home" class="ui-btn-active h ui-state-persist">Home</a></li>
+							<li><a href="#add"data-icon="plus" class="h">Add</a></li>
+							<li><a href="#help"data-icon="info" class="h">Help</a></li>
+						</ul>
+					</div>
+				</div><!-- /header -->
+
+				<div role="main" class="ui-content animated fadeInUp">
+					<div id="mysearch" class="level-item has-text-centered"></div>
+						<ul data-role="listview" id="propertiesList" data-filter="true" data-filter-placeholder="Search Properties" data-inset="true"></ul>
+				
+				</div><!-- /content -->
+
+				
+
+				<div data-role="footer"    data-position="fixed">
+					<div data-role="navbar">
+						<ul>
+							<!-- <li><a href="" data-icon="gear">Filter by</a></li> -->
+							<li><a href="#popupLogin" data-icon="gear" data-rel="popup" data-position-to="window" 
+									data-transition="pop" data-theme="b" >Filter Search by</a></li>
+						</ul>
+
+					</div>
+
+					<!-- <a href="#popupLogin" data-rel="popup" data-position-to="window" 
+				class="ui-btn ui-corner-all ui-shadow ui-btn-inline ui-icon-check ui-btn-icon-left ui-btn-a" data-transition="pop">Sign in</a> -->
+				<div data-role="popup" id="popupLogin" data-transition="flow" data-theme="a" class="ui-content">
+						<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+							    <form id="seacrhForm">
+									<h2 class="customTitle" style="text-align:center; margin-top:-10px;">Filter Search</h2>
+									    <div data-role="rangeslider">
+									        <label for="range-1a">Monthly fee</label>
+									        <input type="range" name="range-1a" id="range-1a" min="0" max="5000" value="500">
+									        <label for="range-1b">Rangeslider:</label>
+									        <input type="range" name="range-1b" id="range-1b" min="0" max="5000" value="2000">
+									    </div>
+
+									<div class="ui-field-contain">
+											<legend>Property Type  </legend>
+											<select name="propertyTypeSearch" id="propertyTypeSearch">
+												<option value="" hidden>Select</option>
+												<option value="Flat">Flat</option>
+												<option value="House">House</option>
+												<option value="Bungalow">Bungalow</option>
+											</select>
+										</div>
+
+										<div class="ui-field-contain">
+												<legend>Number of bedrooms</legend>
+												<select name="bedroomsQtySearch" id="bedroomsQtySearch">
+													<option value="" hidden>Select</option>
+													<option value="0">Studio</option>
+													<option value="1">1 bedroom</option>
+													<option value="2">2 bedroom</option>
+													<option value="3">3 bedroom</option>
+													<option value="4">4 bedroom</option>
+												</select>
+										</div>
+
+										<div class="ui-field-contain">
+												<legend>Furniture Types</legend>
+												<select name="furnitureTypeSearchs" id="furnitureTypeSearch" >
+													<option value="" hidden>Select</option>
+													<option value="Furnished">Furnished</option>
+													<option value="Unfurnished">Unfurnished</option>
+													<option value="Part Furnished">Part Furnished</option>
+												</select>
+												
+											</div>
+
+										<!-- <div class="ui-field-contain">
+												<legend>Added</legend>
+												<select name="bedroomsQty" id="bedroomsQty" disabled>
+													<option value="" hidden>Select</option>
+													<option value="0">Last 24 hours</option>
+													<option value="2">Last 3 days</option>
+													<option value="3">Last 7 days</option>
+													<option value="4">Last 14 days</option>
+													<option value="4">Last 30 days</option>
+												</select>
+										</div> -->
+
+										<!-- <div class="ui-field-contain">
+												<legend>Sort by</legend>
+												<select name="bedroomsQty" id="bedroomsQty" disabled>
+													<option value="" hidden>Select</option>
+													<option value="0">Lowest Price</option>
+													<option value="2">Most Recent</option>
+													<option value="3">Most Reduce</option>
+													<option value="4">Most Popular</option>
+												</select>
+										</div> -->
+
+										<fieldset class="ui-grid-a">
+												<!--     <div class="ui-block-a"><input type="submit" value="Clear Filter" data-theme="a"></div> -->
+												    <div><input type="button" onClick="searchResults();"  value="Show Results" data-theme="a"></div>
+										</fieldset>
+								</form>
+				</div>
+					
+				</div><!-- /footer -->
+
+		</div><!-- End of page -->
+
+		<!-- Start of Create Property page -->
+		<div data-role="page" id="add">
+				<div data-role="header" style="overflow:hidden" data-position="fixed">
+					<h1 class="h" style="font-size:4.1rem;">RentalZ </h1><small class="level-item has-text-centered mytitle ">Search properties for sale and to rent in the UK</small>
+					<div data-role="navbar">
+							<ul>
+								<li><a href="#list"data-icon="home" class="h">Home</a></li>
+								<li><a href="#add"data-icon="plus" class="ui-btn-active h ui-state-persist ">Add</a></li>
+								<li><a href="#help"data-icon="info" class="h ">Help</a></li>
+							</ul>
+						</div>
+					</div><!-- /header -->
+			
+				<div role="main" class="ui-content">
+					<h2 class="customTitle">Create a New Flat Rental Post</h1>
+					<div style="text-align:center;" >
+							<!-- data-ajax="false" -->
+						<form id="addPropertyForm"  >
+							
+							<div class="ui-field-contain">
+								<legend>Select the Property Type <strong style="color:red">*</strong> </legend>
+								<select name="propertyType" id="propertyType" required>
+									<option value="" hidden>Select</option>
+									<option value="Flat">Flat</option>
+									<option value="House">House</option>
+									<option value="Bungalow">Bungalow</option>
+								</select>
+							</div>
+						
+							<div class="ui-field-contain">
+									<legend>Select Number of bedrooms <strong style="color:red">*</strong></legend>
+									<select name="bedty" id="bedQty" required>
+										<option value="" hidden>Select</option>
+										<option value="0">Studio</option>
+										<option value="1">1 bedroom</option>
+										<option value="2">2 bedroom</option>
+										<option value="3">3 bedroom</option>
+										<option value="4">4 bedroom</option>
+									</select>
+							</div><br>
+
+							<label>Select Availability Date & Time <strong style="color:red">*</strong></label>
+							<input type="date" id="avalabilityDate" name="date" value="" data-inline="true" required> 
+							<input type="time" id="avalabilityTime" name="time" value="" data-inline="true" required>
+							<br>
+							
+							<label> Monthly Fees Pcm <strong style="color:red">*</strong> </label>
+							<input type="number" name="number" pattern="[0-9]*" id="montlyfee" data-inline="true" required> 
+							
+							<div class="ui-field-contain">
+								<legend>Select Furniture Types</legend>
+								<select name="furnitureType" id="furnitureType" >
+									<option value="" hidden>Select</option>
+									<option value="Furnished">Furnished</option>
+									<option value="Unfurnished">Unfurnished</option>
+									<option value="Part Furnished">Part Furnished</option>
+								</select>
+								
+							</div>
+						
+
+							<div  class="ui-field-contain" id="listAddresses"></div>
+							
+							<label for="basic">Find Address <strong style="color:red">*</strong></label>
+							<input type="text" name="name" id="postcode" value="" data-clear-btn="true" required>
+							<input  type="button" data-theme="a"  id="find"   value="Find"/></input><br> 
+
+							<label for="textarea-a">Notes and Description</label>
+							<textarea  id="notes" placeholder="Enter any extra info here..."> </textarea>	
+
+							<label for="basic">Posted by <strong style="color:red">*</strong></label>
+							<input type="text" name="name" title="Only letters are allowed"  pattern="[a-zA-Z][a-zA-Z ]+" id="postby" value="" data-clear-btn="true" required>
+
+					    	<input type="submit" data-theme="b"  id="btnSubmit" value="Submit"/>	
+						</form>
+
+					</div>
+						
+				</div><!-- /content -->
+			
+				<div data-role="footer"  data-position="fixed">
+					<h4>Page Footer</h4>
+				</div><!-- /footer -->
+		</div><!-- End of page -->
+
+		<!-- Start of Help page (Under construction) -->
+		<div data-role="page" id="help">
+
+					<div data-role="header" style="overflow:hidden" data-position="fixed">
+						<h1 class="h" style="font-size:4.1rem;">RentalZ </h1><small class="level-item has-text-centered mytitle ">Search properties for sale and to rent in the UK</small>
+						<div data-role="navbar">
+								<ul>
+									<li><a href="#list"data-icon="home" class="h">Home</a></li>
+									<li><a href="#add"data-icon="plus" class="h">Add</a></li>
+									<li><a href="#help"data-icon="info" class="ui-btn-active h ui-state-persist">help</a></li>
+								</ul>
+							</div>
+						</div><!-- /header -->
+			
+				<div role="main" class="ui-content">
+					<p>search</p>
+					<p><a href="#list">Back to home</a></p>
+				</div><!-- /content -->
+			
+				<div data-role="footer"  data-position="fixed">
+					<h4>Page Footer</h4>
+				</div><!-- /footer -->
+		</div><!-- End of page -->
+
+		<!-- Start of Property page -->
+		<div data-role="page" id="map-page" data-url="map-page">
+				<div data-role="header" style="overflow:hidden">
+					<h1 class="h" style="font-size:4.1rem;">RentalZ </h1><small class="level-item has-text-centered mytitle ">Search properties for sale and to rent in the UK</small>
+					<div data-role="navbar">
+							<ul> 
+								<li><a href="#list"data-icon="home" class="h">Home</a></li>
+								<li><a href="#map-canvas"data-icon="forward" class="h">Share</a></li>
+								<li><a  data-icon="camera" class="h" id="btn_camera">Edit</a></li>
+								<li><a onClick="deletePost()" data-icon="delete" class="h">Delete</a></li>
+								<li><a href="#popupLogin1" data-icon="comment" 
+								data-rel="popup" data-position-to="window" class="h">Add a note</a></li>
+							</ul>
+						</div>
+				</div><!-- /header -->
+
+					<div data-role="popup" id="popupLogin1" data-transition="flip" data-theme="a" class="ui-content">
+							<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+							<fieldset>
+						    <form id="form1">
+								<h1 style="text-align:center; margin-top:-10px; font-size:1.9rem">Add a Note</h1>
+									<label for="basic">Title</label>
+									<input type="text" name="name" id="postNoteTitle" value="" data-clear-btn="true" required>
+							  		<label for="textarea-a">Description</label>
+									<textarea  id="postNoteDesc"  rows="15" data-clear-btn="true" placeholder="Enter any extra info here..." required> </textarea><br>	
+									<label for="basic">Posted by</label>
+									<input type="text" name="bys" id="postNoteBy" value="" data-clear-btn="true" required>
+									<input type="button" onClick="addNotePost()"  value="Submit" data-theme="b">
+							</fieldset>
+							</form>
+			</div>
+
+				<div role="main" class="ui-content animated slideInRight"><br>
+					<div id="try"></div>
+					<!-- map loads here... -->
+					<div id="map-canvas"></div>
+					<br>
+					<div id="postNotes"></div>
+					<br>
+				</div>
+		</div><!-- End of page -->
+
+		<!-- Start of Edit Post page  (Under construction) -->
+		<div data-role="page" id="editPost">
+				<div data-role="header" style="overflow:hidden" data-position="fixed">
+					<h1 class="h" style="font-size:4.1rem;">RentalZ </h1><small class="level-item has-text-centered mytitle ">Search properties for sale and to rent in the UK</small>
+					<div data-role="navbar">
+							<ul>
+								<li><a href="#list"data-icon="home" class="h">Home</a></li>
+								<li><a href="#help"data-icon="info" class="h ">Help</a></li>
+							</ul>
+						</div>
+					</div><!-- /header -->
+			
+				<div role="main" class="ui-content">
+					<h2 class="customTitle">Edit Post</h1>
+					<div style="text-align:center;" >
+							<!-- data-ajax="false" -->
+						<form id="everything11"  >
+							
+							<div class="ui-field-contain">
+								<legend>Select the Property Type</legend>
+								<select name="propertyType" id="propertyType" required>
+									<option value="" hidden>Select</option>
+									<option value="Flat">Flat</option>
+									<option value="House">House</option>
+									<option value="Bungalow">Bungalow</option>
+								</select>
+							</div>
+						
+							<div class="ui-field-contain">
+									<legend>Select Number of bedrooms</legend>
+									<select name="bedty" id="bedQty" required>
+										<option value="" hidden>Select</option>
+										<option value="0">Studio</option>
+										<option value="1">1 bedroom</option>
+										<option value="2">2 bedroom</option>
+										<option value="3">3 bedroom</option>
+										<option value="4">4 bedroom</option>
+									</select>
+							</div><br>
+
+							<label>Select Availability Date & Time</label>
+							<input type="date" id="avalabilityDate" name="date" value="" data-inline="true" required> 
+							<input type="time" id="avalabilityTime" name="time" value="" data-inline="true" required>
+							<br>
+							
+							<label> Monthly Fees Pcm </label>
+							<input type="number" name="number" pattern="[0-9]*" id="montlyfee" data-inline="true" required> 
+							
+							<div class="ui-field-contain">
+								<legend>Select Furniture Types</legend>
+								<select name="furnitureType" id="furnitureType" required>
+									<option value="" hidden>Select</option>
+									<option value="Furnished">Furnished</option>
+									<option value="Unfurnished">Unfurnished</option>
+									<option value="Part Furnished">Part Furnished</option>
+								</select>
+								
+							</div>
+							<!-- <fieldset data-role="controlgroup" data-type="horizontal" name="Smoker" id="Smoker">
+								<label><input type="checkbox" value="Furnished" name="checkbox-0 ">Furnished </label>
+								<label><input type="checkbox" value="Unfurnished" name="checkbox-0 ">Unfurnished </label>
+								<label><input type="checkbox" value="Part Furnished" name="checkbox-0 ">Part Furnished </label></fieldset> -->
+
+							<div  class="ui-field-contain" id="listAddresses"></div>
+							
+							<label for="basic">Find Address</label>
+							<input type="text" name="name" id="postcode" value="" data-clear-btn="true" required>
+							<input  type="button" data-theme="a"  id="find"   value="Find"/></input><br> 
+
+							<label for="textarea-a">Notes and Description</label>
+							<textarea  id="notes" placeholder="Enter any extra info here..."> </textarea>	
+
+							<label for="basic">Post by</label>
+							<input type="text" name="name" id="postby" value="" data-clear-btn="true" required>
+
+					    	<input type="submit" data-theme="b"  id="btnSubmit" value="Submit"/>	
+						</form>
+
+					</div>
+						
+				</div><!-- /content -->
+			
+				<div data-role="footer"  data-position="fixed">
+					<h4>Page Footer</h4>
+				</div><!-- /footer -->
+		</div><!-- End of page -->
+  </body>
+</html>
+
+
+	
